@@ -1,152 +1,111 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Gallery Slider Lokal</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Webtoon Style Viewer</title>
   <style>
     body {
-      text-align: center;
       font-family: sans-serif;
       padding: 20px;
-    }
-    img {
-      width: 90%;
-      max-width: 400px;
-      margin: 20px 0;
-      border-radius: 0;
-      box-shadow: none;
-    }
-    button, select {
-      padding: 10px 20px;
-      margin: 5px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      cursor: pointer;
-    }
-    button:disabled {
-      background-color: gray;
-      cursor: not-allowed;
-    }
-    select {
-      background-color: #f0f0f0;
-    }
-    #pageNumber {
-      margin-top: -10px;
-      margin-bottom: 20px;
-      font-size: 16px;
-      color: #555;
+      margin: 0;
+      background-color: #f5f5f5;
     }
     input[type="text"] {
-      width: 90%;
-      max-width: 400px;
+      width: 95%;
+      max-width: 600px;
       padding: 10px;
       font-size: 16px;
-      margin-bottom: 10px;
-      border-radius: 5px;
+      margin-bottom: 20px;
+      border-radius: 6px;
       border: 1px solid #ccc;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .image-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .image-container img {
+      max-width: 100%;    
+      margin: 2px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    #loader {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
 
-  <h1>Preview Gambar</h1>
-
-  <input type="text" id="urlInput" placeholder="Masukkan link dasar (contoh: https://example.com/img/)" />
-  <br>
-  <label for="extSelect">Jenis Gambar:</label>
-  <select id="extSelect">
-    <option value="auto">Auto</option>
-    <option value="jpg">.jpg</option>
-    <option value="png">.png</option>
-    <option value="webp">.webp</option>
-  </select>
-  <br>
-
-  <div id="pageNumber">Halaman: 1</div>
-  <img id="preview" src="" alt="Gambar tidak tersedia">
-  <br>
-  <button id="prevBtn" onclick="changeImage(-1)" disabled>&larr; Kiri</button>
-  <button onclick="changeImage(1)">Kanan &rarr;</button>
+  <h2 style="text-align:center">Webtoon Viewer</h2>
+  <input type="text" id="urlInput" placeholder="Masukkan link dasar (contoh: https://example.com/thumbnails/598380)">
+  <div class="image-container" id="imageContainer"></div>
+  <div id="loader">Memuat halaman...</div>
 
   <script>
-    let currentIndex = 1;
-    let baseURL = "https://www.wow.com/2020/";
-    const img = document.getElementById("preview");
-    const page = document.getElementById("pageNumber");
-    const prevBtn = document.getElementById("prevBtn");
+    const extensions = ['webp', 'jpg', 'jpeg', 'png', 'gif'];
+    const imageContainer = document.getElementById("imageContainer");
     const urlInput = document.getElementById("urlInput");
-    const extSelect = document.getElementById("extSelect");
+    const loader = document.getElementById("loader");
 
-    // Update URL saat input berubah
     urlInput.addEventListener("change", () => {
-      baseURL = urlInput.value.trim();
-      currentIndex = 1;
-      updateImage();
+      imageContainer.innerHTML = "";
+      loadImagesFromStart();
     });
 
-    // Pilih ekstensi gambar manual
-    extSelect.addEventListener("change", () => {
-      updateImage();
-    });
+    function loadImagesFromStart() {
+      let input = urlInput.value.trim();
+      if (!input) return;
 
-    // Update gambar dan nomor halaman
-    function updateImage() {
-      page.textContent = `Halaman: ${currentIndex}`;
-      prevBtn.disabled = currentIndex === 1;
+      let baseUrl = input.replace(/thumbnails/gi, 'images').replace(/\/\d+\.(jpg|jpeg|png|webp)$/i, '');
+      let page = 1;
 
-      const extChoice = extSelect.value;
-      let customURL = baseURL;
-
-      // Cek apakah URL sudah punya ekstensi gambar
-      if (customURL.match(/\.(jpg|png|webp)$/)) {
-        // Ganti angka terakhir dengan nomor halaman (jaga ekstensi tetap)
-        customURL = customURL.replace(/\d+\.(jpg|png|webp)$/, `${currentIndex}.$1`);
-        img.src = customURL;
-        return;
-      }
-
-      // Kalau user pilih auto, coba semua ekstensi
-      if (extChoice === "auto") {
-        tryExtensions(["jpg", "png", "webp"]);
-      } else {
-        img.src = `${baseURL}${currentIndex}.${extChoice}`;
-      }
+      loader.style.display = "block";
+      loadNextImage(baseUrl, page);
     }
 
-    // Coba ekstensi gambar satu per satu
-    function tryExtensions(exts) {
-      if (exts.length === 0) {
-        img.src = ""; // gagal semua
-        return;
-      }
-      const ext = exts.shift();
-      const testImg = new Image();
-      testImg.onload = () => {
-        img.src = testImg.src;
-      };
-      testImg.onerror = () => {
-        tryExtensions(exts);
-      };
-      testImg.src = `${baseURL}${currentIndex}.${ext}`;
-    }
+    function loadNextImage(baseUrl, page) {
+      let extIndex = 0;
 
-    // Navigasi gambar (kanan/kiri)
-    function changeImage(dir) {
-      if (dir === -1 && currentIndex > 1) {
-        currentIndex--;
-      } else if (dir === 1) {
-        currentIndex++;
-      }
-      updateImage();
-    }
+      function tryNextExtension() {
+        if (extIndex >= extensions.length) {
+          loader.innerText = "Semua gambar dimuat.";
+          setTimeout(() => loader.style.display = "none", 1500);
+          return;
+        }
 
-    // Init awal
-    updateImage();
+        const ext = extensions[extIndex];
+        const imgUrl = `${baseUrl}/${page}.${ext}`;
+        const testImg = new Image();
+
+        testImg.onload = () => {
+          imageContainer.appendChild(testImg);
+          loader.innerText = `Memuat halaman ${page + 1}...`;
+          loadNextImage(baseUrl, page + 1);
+        };
+
+        testImg.onerror = () => {
+          extIndex++;
+          tryNextExtension();
+        };
+
+        testImg.src = imgUrl;
+      }
+
+      tryNextExtension();
+    }
   </script>
 
 </body>
