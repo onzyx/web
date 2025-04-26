@@ -1,112 +1,238 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Webtoon Style Viewer</title>
+  <meta charset="UTF-8">
+  <title>Gallery Webtoon Style + Navbar</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
-      font-family: sans-serif;
-      padding: 20px;
       margin: 0;
-      background-color: #f5f5f5;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
     }
-    input[type="text"] {
-      width: 95%;
-      max-width: 600px;
+    /* Navbar */
+    #popupControls {
+      position: fixed;
+      top: -320px; 
+      left: 0;
+      right: 0;
+      margin: auto;
+      max-width: 500px;
+      background: white;
+      padding: 15px;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      z-index: 1000;
+      transition: all 0.4s ease;
+    }
+    #popupControls.show {
+      top: 0;
+    }
+    #popupControls input[type="text"],
+    #popupControls select {
+      width: 100%;
+      margin: 8px 0;
       padding: 10px;
-      font-size: 16px;
-      margin-bottom: 20px;
-      border-radius: 6px;
       border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    #popupControls label {
       display: block;
-      margin-left: auto;
-      margin-right: auto;
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 14px;
     }
-    .image-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    #popupControls input[type="checkbox"] {
+      transform: scale(1.2);
+      margin-right: 5px;
     }
-    .image-container img {
-      max-width: 100%;    
-      margin: 2px 0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    #navbarLoadingStatus {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #777;
     }
-    #loader {
+    /* Gambar */
+    #imageContainer img {
+      width: 100%;
+      display: block;
+      margin-bottom: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    /* Loading Status Kanan Bawah */
+    #floatingLoadingStatus {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.5);
       color: white;
-      padding: 10px 15px;
-      border-radius: 8px;
+      padding: 8px 15px;
+      border-radius: 20px;
       font-size: 14px;
-      display: none;
       z-index: 999;
+      display: none;
+      transition: opacity 0.3s ease;
     }
   </style>
 </head>
 <body>
 
-  <h2 style="text-align:center">Webtoon Viewer</h2>
-  <input type="text" id="urlInput" placeholder="Masukkan link dasar (contoh: https://example.com/thumbnails/598380)">
-  <div class="image-container" id="imageContainer"></div>
-  <div id="loader">Memuat halaman...</div>
+<!-- Navbar -->
+<div id="popupControls">
+  <input type="text" id="urlInput" placeholder="Masukkan link dasar">
+  <select id="extSelect">
+    <option value="auto">Auto</option>
+    <option value="jpg">.jpg</option>
+    <option value="jpeg">.jpeg</option>
+    <option value="png">.png</option>
+    <option value="webp">.webp</option>
+    <option value="gif">.gif</option>
+  </select>
 
-  <script>
-    const extensions = ['webp', 'jpg', 'jpeg', 'png', 'gif'];
-    const imageContainer = document.getElementById("imageContainer");
-    const urlInput = document.getElementById("urlInput");
-    const loader = document.getElementById("loader");
+  <label>
+    <input type="checkbox" id="spacingToggle">
+    Aktifkan Jarak Antar Gambar
+  </label>
 
-    urlInput.addEventListener("change", () => {
-      imageContainer.innerHTML = "";
-      loadImagesFromStart();
+  <label>
+    <input type="checkbox" id="toggleFloatingLoading">
+    Tampilkan Loading di Kanan Bawah
+  </label>
+
+  <div id="navbarLoadingStatus">Menunggu input...</div>
+</div>
+
+<!-- Loading Floating -->
+<div id="floatingLoadingStatus">Menunggu input...</div>
+
+<!-- Container Gambar -->
+<div id="imageContainer"></div>
+
+<script>
+  const popupControls = document.getElementById('popupControls');
+  const urlInput = document.getElementById('urlInput');
+  const extSelect = document.getElementById('extSelect');
+  const spacingToggle = document.getElementById('spacingToggle');
+  const toggleFloatingLoading = document.getElementById('toggleFloatingLoading');
+  const navbarLoadingStatus = document.getElementById('navbarLoadingStatus');
+  const floatingLoadingStatus = document.getElementById('floatingLoadingStatus');
+  const imageContainer = document.getElementById('imageContainer');
+
+  let baseURL = "";
+  let currentIndex = 1;
+  let loading = false;
+  let navbarOpen = false;
+
+  document.addEventListener('click', e => {
+    if (e.target.closest('#popupControls')) return; 
+    if (!navbarOpen) {
+      popupControls.classList.add('show');
+      navbarOpen = true;
+    } else {
+      popupControls.classList.remove('show');
+      navbarOpen = false;
+    }
+  });
+
+  popupControls.addEventListener('click', e => {
+    e.stopPropagation();
+  });
+
+  urlInput.addEventListener("change", startLoading);
+  extSelect.addEventListener("change", startLoading);
+  spacingToggle.addEventListener("change", updateSpacing);
+  toggleFloatingLoading.addEventListener("change", updateLoadingDisplay);
+
+  function startLoading() {
+    imageContainer.innerHTML = "";
+    baseURL = urlInput.value.trim();
+    if (baseURL.includes("thumbnails")) {
+      baseURL = baseURL.replace("thumbnails", "images");
+    }
+    currentIndex = 1;
+    loadImages();
+  }
+
+  function updateSpacing() {
+    const spacing = spacingToggle.checked ? "2px" : "0px";
+    const images = document.querySelectorAll("#imageContainer img");
+    images.forEach(img => {
+      img.style.marginBottom = spacing;
     });
+  }
 
-    function loadImagesFromStart() {
-      let input = urlInput.value.trim();
-      if (!input) return;
-
-      let baseUrl = input.replace(/thumbnails/gi, 'images').replace(/\/\d+\.(jpg|jpeg|png|webp)$/i, '');
-      let page = 1;
-
-      loader.style.display = "block";
-      loadNextImage(baseUrl, page);
+  function updateLoadingDisplay() {
+    if (toggleFloatingLoading.checked) {
+      floatingLoadingStatus.style.display = "block";
+    } else {
+      floatingLoadingStatus.style.display = "none";
     }
+  }
 
-    function loadNextImage(baseUrl, page) {
-      let extIndex = 0;
+  function updateLoadingText(text) {
+    navbarLoadingStatus.textContent = text;
+    floatingLoadingStatus.textContent = text;
+  }
 
-      function tryNextExtension() {
-        if (extIndex >= extensions.length) {
-          loader.innerText = "Semua gambar dimuat.";
-          setTimeout(() => loader.style.display = "none", 1500);
-          return;
-        }
+  function loadImages() {
+    if (!baseURL) return;
+    loading = true;
+    updateLoadingText(`Loading halaman ${currentIndex}...`);
+    updateLoadingDisplay();
 
-        const ext = extensions[extIndex];
-        const imgUrl = `${baseUrl}/${page}.${ext}`;
-        const testImg = new Image();
+    const img = new Image();
+    img.onload = () => {
+      img.style.marginBottom = spacingToggle.checked ? "2px" : "0px";
+      imageContainer.appendChild(img);
+      currentIndex++;
+      updateLoadingText(`Loading halaman ${currentIndex}...`);
+      loadImages();
+    };
+    img.onerror = () => {
+      loading = false;
+      updateLoadingText("Selesai loading semua gambar.");
+      floatingLoadingStatus.style.display = "none";
+    };
 
-        testImg.onload = () => {
-          imageContainer.appendChild(testImg);
-          loader.innerText = `Memuat halaman ${page + 1}...`;
-          loadNextImage(baseUrl, page + 1);
-        };
-
-        testImg.onerror = () => {
-          extIndex++;
-          tryNextExtension();
-        };
-
-        testImg.src = imgUrl;
-      }
-
-      tryNextExtension();
+    const extChoice = extSelect.value;
+    if (extChoice === "auto") {
+      tryExtensions(img, ["webp", "jpg", "jpeg", "png", "gif"]);
+    } else {
+      img.src = fixURL(baseURL, currentIndex, extChoice);
     }
-  </script>
+  }
+
+  function tryExtensions(imgElement, exts) {
+    if (exts.length === 0) {
+      loading = false;
+      updateLoadingText("Selesai loading semua gambar.");
+      floatingLoadingStatus.style.display = "none";
+      return;
+    }
+    const ext = exts.shift();
+    const testImg = new Image();
+    testImg.onload = () => {
+      imgElement.src = testImg.src;
+    };
+    testImg.onerror = () => {
+      tryExtensions(imgElement, exts);
+    };
+    testImg.src = fixURL(baseURL, currentIndex, ext);
+  }
+
+  function fixURL(base, index, ext) {
+    if (base.match(/\d+\.(jpg|jpeg|png|webp)$/)) {
+      return base.replace(/\d+\.(jpg|jpeg|png|webp|gif)$/, `${index}.${ext}`);
+    }
+    if (base.match(/-\d+\.(jpg|jpeg|png|webp|gif)$/)) {
+      return base.replace(/-(\d+)\.(jpg|jpeg|png|webp|gif)$/, `-${index}.${ext}`);
+    }
+    return `${base}${index}.${ext}`;
+  }
+</script>
 
 </body>
 </html>
