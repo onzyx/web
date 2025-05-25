@@ -15,7 +15,7 @@
     /* Navbar */
     #popupControls {
       position: fixed;
-      top: -320px; 
+      top: -380px; 
       left: 0;
       right: 0;
       margin: auto;
@@ -48,6 +48,7 @@
     #popupControls input[type="checkbox"] {
       transform: scale(1.2);
       margin-right: 5px;
+      vertical-align: middle;
     }
     #navbarLoadingStatus {
       margin-top: 10px;
@@ -80,7 +81,6 @@
 </head>
 <body>
 
-<!-- Navbar -->
 <div id="popupControls">
   <input type="text" id="urlInput" placeholder="Masukkan link dasar">
   <select id="extSelect">
@@ -102,13 +102,16 @@
     Tampilkan Loading di Kanan Bawah
   </label>
 
+  <label>
+    <input type="checkbox" id="clearInputToggle"> 
+    Kosongkan Link Setelah Gambar Dimuat
+  </label>
+
   <div id="navbarLoadingStatus">Menunggu input...</div>
 </div>
 
-<!-- Loading Floating -->
 <div id="floatingLoadingStatus">Menunggu input...</div>
 
-<!-- Container Gambar -->
 <div id="imageContainer"></div>
 
 <script>
@@ -117,6 +120,7 @@
   const extSelect = document.getElementById('extSelect');
   const spacingToggle = document.getElementById('spacingToggle');
   const toggleFloatingLoading = document.getElementById('toggleFloatingLoading');
+  const clearInputToggle = document.getElementById('clearInputToggle'); 
   const navbarLoadingStatus = document.getElementById('navbarLoadingStatus');
   const floatingLoadingStatus = document.getElementById('floatingLoadingStatus');
   const imageContainer = document.getElementById('imageContainer');
@@ -125,6 +129,7 @@
   let currentIndex = 1;
   let loading = false;
   let navbarOpen = false;
+  // Variabel initialImageLoaded sudah tidak diperlukan lagi untuk logika ini
 
   document.addEventListener('click', e => {
     if (e.target.closest('#popupControls')) return; 
@@ -153,7 +158,12 @@
       baseURL = baseURL.replace("thumbnails", "images");
     }
     currentIndex = 1;
-    loadImages();
+    // Tidak perlu reset initialImageLoaded lagi
+    if (baseURL) { 
+        loadImages();
+    } else {
+        updateLoadingText("Masukkan link dasar terlebih dahulu.");
+    }
   }
 
   function updateSpacing() {
@@ -178,7 +188,7 @@
   }
 
   function loadImages() {
-    if (!baseURL) return;
+    if (!baseURL) return; 
     loading = true;
     updateLoadingText(`Loading halaman ${currentIndex}...`);
     updateLoadingDisplay();
@@ -187,13 +197,22 @@
     img.onload = () => {
       img.style.marginBottom = spacingToggle.checked ? "2px" : "0px";
       imageContainer.appendChild(img);
+
+      // Langsung cek apakah checkbox clearInputToggle dicentang setiap kali gambar berhasil dimuat
+      if (clearInputToggle.checked) {
+        urlInput.value = ""; // Kosongkan input link
+      }
+
       currentIndex++;
       updateLoadingText(`Loading halaman ${currentIndex}...`);
-      loadImages();
+      loadImages(); 
     };
     img.onerror = () => {
       loading = false;
       updateLoadingText("Selesai loading semua gambar.");
+      if (imageContainer.children.length === 0 && currentIndex === 1) {
+        updateLoadingText("Gagal memuat gambar pertama. Cek link atau ekstensi.");
+      }
       floatingLoadingStatus.style.display = "none";
     };
 
@@ -207,28 +226,40 @@
 
   function tryExtensions(imgElement, exts) {
     if (exts.length === 0) {
-      loading = false;
-      updateLoadingText("Selesai loading semua gambar.");
-      floatingLoadingStatus.style.display = "none";
+      imgElement.onerror(); 
       return;
     }
     const ext = exts.shift();
-    const testImg = new Image();
+    const testImg = new Image(); 
     testImg.onload = () => {
-      imgElement.src = testImg.src;
+      imgElement.src = testImg.src; 
     };
     testImg.onerror = () => {
-      tryExtensions(imgElement, exts);
+      tryExtensions(imgElement, exts); 
     };
     testImg.src = fixURL(baseURL, currentIndex, ext);
   }
 
   function fixURL(base, index, ext) {
-    if (base.match(/\d+\.(jpg|jpeg|png|webp)$/)) {
+    if (base.match(/\d+\.(jpg|jpeg|png|webp|gif)$/)) {
       return base.replace(/\d+\.(jpg|jpeg|png|webp|gif)$/, `${index}.${ext}`);
     }
     if (base.match(/-\d+\.(jpg|jpeg|png|webp|gif)$/)) {
       return base.replace(/-(\d+)\.(jpg|jpeg|png|webp|gif)$/, `-${index}.${ext}`);
+    }
+    
+    const lastDotIndex = base.lastIndexOf('.');
+    const lastSlashIndex = base.lastIndexOf('/');
+
+    if (lastDotIndex > lastSlashIndex && lastDotIndex > -1) { 
+        const baseWithoutExt = base.substring(0, lastDotIndex);
+        // const originalExt = base.substring(lastDotIndex + 1); // Tidak terpakai
+        if (baseWithoutExt.match(/\d+$/)) { 
+             return baseWithoutExt.replace(/\d+$/, index) + '.' + ext;
+        } else if (baseWithoutExt.match(/_\d+$/)) { 
+             return baseWithoutExt.replace(/_\d+$/, `_${index}`) + '.' + ext;
+        }
+        return `${baseWithoutExt}${index}.${ext}`;
     }
     return `${base}${index}.${ext}`;
   }
