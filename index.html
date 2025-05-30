@@ -3,59 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <title>Gallery Webtoon Style + Navbar</title>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css">
   <style>
-    :root {
-      --bg-color: #f9f9f9;
-      --text-color: #333;
-      --navbar-bg: white;
-      --navbar-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      --input-bg: white;
-      --input-border: #ccc;
-      --input-text: #333;
-      --label-text: #333;
-      --status-text: #777;
-      --placeholder-text: #999;
-      --accent-color: #007bff;
-    }
-
-    body.dark-theme {
-      --bg-color: #121212;
-      --text-color: #e0e0e0;
-      --navbar-bg: #1e1e1e;
-      --navbar-shadow: 0 4px 15px rgba(0,0,0,0.5);
-      --input-bg: #2c2c2c;
-      --input-border: #555;
-      --input-text: #e0e0e0;
-      --label-text: #e0e0e0;
-      --status-text: #aaa;
-      --placeholder-text: #777;
-      --accent-color: #4da1ff;
-    }
-
     * {
       box-sizing: border-box;
     }
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      transition: background-color 0.3s ease, color 0.3s ease;
+      background: #f9f9f9;
     }
+    /* Navbar */
     #popupControls {
       position: fixed;
-      top: -420px; 
+      top: -380px; 
       left: 0;
       right: 0;
       margin: auto;
       max-width: 500px;
-      background: var(--navbar-bg);
+      background: white;
       padding: 15px;
       border-radius: 0 0 10px 10px;
-      box-shadow: var(--navbar-shadow);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
       z-index: 1000;
-      transition: all 0.4s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+      transition: all 0.4s ease;
     }
     #popupControls.show {
       top: 0;
@@ -65,82 +35,40 @@
       width: 100%;
       margin: 8px 0;
       padding: 10px;
-      border: 1px solid var(--input-border);
-      background-color: var(--input-bg);
-      color: var(--input-text);
+      border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 16px;
-      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-    }
-    #popupControls input[type="text"]::placeholder {
-        color: var(--placeholder-text);
     }
     #popupControls label {
       display: block;
       margin-top: 10px;
       font-weight: bold;
       font-size: 14px;
-      color: var(--label-text);
-      transition: color 0.3s ease;
     }
     #popupControls input[type="checkbox"] {
       transform: scale(1.2);
       margin-right: 5px;
       vertical-align: middle;
-      accent-color: var(--accent-color);
     }
     #navbarLoadingStatus {
       margin-top: 10px;
       font-size: 12px;
-      color: var(--status-text);
-      transition: color 0.3s ease;
+      color: #777;
     }
-
-    .action-buttons-container {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 10px; 
-      margin-top: 8px; 
-    }
-
-    .action-button {
-      width: 32px;
-      height: 32px;
-      padding: 0;
-      font-size: 16px; 
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border: 1px solid var(--input-border);
-      background-color: var(--input-bg);
-      color: var(--input-text); 
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
-    }
-    .action-button:hover {
-      opacity: 0.75;
-    }
-    .action-button i { 
-        margin: 0;
-        padding: 0;
-        line-height: 1; 
-    }
-
-
+    /* Gambar */
     #imageContainer img {
       width: 100%;
       display: block;
-      margin-bottom: 0; 
+      margin-bottom: 0;
       border-radius: 0;
       box-shadow: none;
     }
+    /* Loading Status Kanan Bawah */
     #floatingLoadingStatus {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.5);
       color: white;
       padding: 8px 15px;
       border-radius: 20px;
@@ -180,11 +108,6 @@
   </label>
 
   <div id="navbarLoadingStatus">Menunggu input...</div>
-
-  <div class="action-buttons-container">
-    <button id="reloadBtn" class="action-button" title="Muat Ulang"><i class="icon-refresh"></i></button>
-    <button id="themeToggleBtn" class="action-button" title="Ganti Tema"><i class="icon-sun"></i></button> 
-  </div>
 </div>
 
 <div id="floatingLoadingStatus">Menunggu input...</div>
@@ -201,40 +124,13 @@
   const navbarLoadingStatus = document.getElementById('navbarLoadingStatus');
   const floatingLoadingStatus = document.getElementById('floatingLoadingStatus');
   const imageContainer = document.getElementById('imageContainer');
-  
-  const themeToggleBtn = document.getElementById('themeToggleBtn');
-  const reloadBtn = document.getElementById('reloadBtn');
 
   let baseURL = "";
   let currentIndex = 1;
   let loading = false;
   let navbarOpen = false;
+  // Variabel initialImageLoaded sudah tidak diperlukan lagi untuk logika ini
 
-  function applyTheme(theme) {
-    if (theme === 'dark') {
-      document.body.classList.add('dark-theme');
-      if (themeToggleBtn) themeToggleBtn.innerHTML = '<i class="icon-sun"></i>';
-    } else {
-      document.body.classList.remove('dark-theme');
-      if (themeToggleBtn) themeToggleBtn.innerHTML = '<i class="icon-moon"></i>';
-    }
-  }
-
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-      let currentThemeIsDark = document.body.classList.contains('dark-theme');
-      let newTheme = currentThemeIsDark ? 'light' : 'dark';
-      localStorage.setItem('theme', newTheme);
-      applyTheme(newTheme);
-    });
-  }
-
-  if (reloadBtn) {
-    reloadBtn.addEventListener('click', () => {
-      location.reload();
-    });
-  }
-  
   document.addEventListener('click', e => {
     if (e.target.closest('#popupControls')) return; 
     if (!navbarOpen) {
@@ -262,6 +158,7 @@
       baseURL = baseURL.replace("thumbnails", "images");
     }
     currentIndex = 1;
+    // Tidak perlu reset initialImageLoaded lagi
     if (baseURL) { 
         loadImages();
     } else {
@@ -301,11 +198,13 @@
       img.style.marginBottom = spacingToggle.checked ? "2px" : "0px";
       imageContainer.appendChild(img);
 
+      // Langsung cek apakah checkbox clearInputToggle dicentang setiap kali gambar berhasil dimuat
       if (clearInputToggle.checked) {
-        urlInput.value = ""; 
+        urlInput.value = ""; // Kosongkan input link
       }
 
       currentIndex++;
+      updateLoadingText(`Loading halaman ${currentIndex}...`);
       loadImages(); 
     };
     img.onerror = () => {
@@ -314,13 +213,7 @@
       if (imageContainer.children.length === 0 && currentIndex === 1) {
         updateLoadingText("Gagal memuat gambar pertama. Cek link atau ekstensi.");
       }
-      if (imageContainer.children.length > 0 && loading === false) {
-        if (!toggleFloatingLoading.checked) {
-            floatingLoadingStatus.style.display = "none";
-        }
-      } else if (imageContainer.children.length === 0 && currentIndex === 1) {
-        floatingLoadingStatus.style.display = "none";
-      }
+      floatingLoadingStatus.style.display = "none";
     };
 
     const extChoice = extSelect.value;
@@ -360,6 +253,7 @@
 
     if (lastDotIndex > lastSlashIndex && lastDotIndex > -1) { 
         const baseWithoutExt = base.substring(0, lastDotIndex);
+        // const originalExt = base.substring(lastDotIndex + 1); // Tidak terpakai
         if (baseWithoutExt.match(/\d+$/)) { 
              return baseWithoutExt.replace(/\d+$/, index) + '.' + ext;
         } else if (baseWithoutExt.match(/_\d+$/)) { 
@@ -369,10 +263,6 @@
     }
     return `${base}${index}.${ext}`;
   }
-
-  const savedInitialTheme = localStorage.getItem('theme') || 'dark';
-  applyTheme(savedInitialTheme);
-
 </script>
 
 </body>
